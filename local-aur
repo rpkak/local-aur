@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+
+import json
+import logging
+import os
+import sys
+from shlex import quote
+from subprocess import check_output
+from tempfile import NamedTemporaryFile, TemporaryDirectory
+from argparse import ArgumentParser
+
+DATA = os.path.join('/', 'var', 'lib', 'local-aur')
+
+
+def ensure_data_dir():
+    if not os.path.isdir(DATA):
+        run_with_error('sudo mkdir %s' % quote(DATA))
+    if not os.path.isdir(os.path.join(DATA, 'repo')):
+        run_with_error('sudo mkdir %s' % quote(os.path.join(DATA, 'repo')))
+    if not os.path.isfile(os.path.join(DATA, 'local-aur.json')):
+        save_json({'packages': {}})
+
+
+def run_with_error(command: str):
+    code = os.system(command)
+    if code != 0:
+        logging.error('Executing "%s" returned %s' % (command, code))
+        sys.exit(1)
+
+
+def build_package(pkgname: str) -> None:
+    cwd = os.getcwd()
+    with TemporaryDirectory(prefix='%s.local-aur.' % pkgname) as build_dir:
+        os.chdir(build_dir)
+
+        run_with_error('git clone https://aur.archlinux.org/%s.git %s --depth=1 --single-branch' %
+                       (quote(pkgname), quote(build_dir)))
+        run_with_error('makepkg --syncdeps')
+
+        files = check_output('makepkg --packagelist', shell=True).decode() \
+            .removesuffix('\n').split('\n')
+
+        dest_files = []
+
+        for file in files:
+            dest = os.path.join(DATA, 'repo', os.path.basename(file))
+            dest_files.append(dest)
+            run_with_error('sudo mv %s %s' % (quote(file), quote(dest)))
+
+        json_data = get_json()
+        json_data['packages'][pkgname] = {
+            'commit_hash': get_commit_hash(pkgname),
+            'dest_files': dest_files,
+            'includes': [e[len('pkgname = '):] for e in check_output('makepkg --printsrcinfo', shell=True).decode().split('\n') if e.startswith('pkgname = ')]
+        }
+        save_json(json_data)
+
+    os.chdir(cwd)
+
+    return dest_files
+
+
+def add_to_repo(dest_files):
+    run_with_error('sudo repo-add %s %s' % (quote(os.path.join(DATA, 'repo',
+                   'local-aur.db.tar.gz')), ' '.join(quote(file) for file in dest_files)))
+
+
+def remove_from_repo(packages):
+    run_with_error('sudo repo-remove %s %s' % (quote(os.path.join(DATA, 'repo',
+                   'local-aur.db.tar.gz')), ' '.join(quote(package) for package in packages)))
+
+
+def get_json():
+    with open(os.path.join(DATA, 'local-aur.json')) as f:
+        return json.load(f)
+
+
+def save_json(json_data):
+    with NamedTemporaryFile('w') as f:
+        json.dump(json_data, f)
+        f.flush()
+        run_with_error('sudo cp %s %s' % (
+            quote(f.name), quote(os.path.join(DATA, 'local-aur.json'))))
+        run_with_error('sudo chmod 644 %s' % quote(
+            os.path.join(DATA, 'local-aur.json')))
+
+
+def get_commit_hash(package):
+    return check_output('git ls-remote https://aur.archlinux.org/%s.git HEAD' % package, shell=True).decode().split('\t', maxsplit=1)[0]
+
+
+def add_packages(packages):
+    json_data = get_json()
+    dest_files = []
+    for package in packages:
+        if package in json_data['packages'] and json_data['packages'][package]['commit_hash'] == get_commit_hash(package):
+            logging.warning('Package "%s" is already up-to-date.' % package)
+        else:
+            dest_files.extend(build_package(package))
+
+    if len(dest_files) == 0:
+        logging.warning('No packages to add to database.')
+    else:
+        add_to_repo(dest_files)
+
+
+def remove_packages(packages):
+    json_data = get_json()
+
+    including = []
+    for package in packages:
+        if package in json_data['packages']:
+            including.extend(json_data['packages'][package]['includes'])
+
+            for file in json_data['packages'][package]['dest_files']:
+                run_with_error('sudo rm %s' % quote(file))
+
+            del json_data['packages'][package]
+        else:
+            logging.warning('Package %s is not installed.', package)
+
+    remove_from_repo(including)
+
+
+if __name__ == '__main__':
+    if os.geteuid() == 0:
+        logging.error('Running local-aur as root is not allowed.')
+    else:
+        ensure_data_dir()
+
+        parser = ArgumentParser('local-aur')
+        parser.set_defaults(command='help')
+        subparsers = parser.add_subparsers()
+
+        add_parser = subparsers.add_parser(
+            'add', help='Adds packages to the local-aur repo.')
+        add_parser.set_defaults(command='add')
+        add_parser.add_argument(
+            'packages', nargs='+', help='Packages to add to the local-aur repo.')
+
+        remove_parser = subparsers.add_parser(
+            'remove', help='Removes packages from the local-aur repo.')
+        remove_parser.set_defaults(command='remove')
+        remove_parser.add_argument(
+            'packages', nargs='+', help='Packages to remove from the local-aur repo.')
+
+        args = parser.parse_args()
+
+        if args.command == 'help':
+            parser.print_usage()
+        elif args.command == 'add':
+            add_packages(args.packages)
+        elif args.command == 'remove':
+            remove_packages(args.packages)
