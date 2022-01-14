@@ -5,18 +5,31 @@ import logging
 import os
 import sys
 from shlex import quote
-from subprocess import check_output
+from subprocess import run, PIPE
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from argparse import ArgumentParser
 
 DATA = os.path.join('/', 'var', 'lib', 'local-aur')
 
 
-def run_with_error(command: str):
-    code = os.system(command)
-    if code != 0:
-        logging.error('Executing "%s" returned %s' % (command, code))
+def run_with_error(command: str, capture_stdout=False):
+    completed_process = run(command, shell=True, stdout=(
+        PIPE if capture_stdout else None))
+    if completed_process.returncode != 0:
+        logging.error('Executing "%s" returned %s' %
+                      (command, completed_process.returncode))
         sys.exit(1)
+
+    if capture_stdout:
+        return completed_process.stdout.decode()
+
+
+def get_package_name_by_file(file: str):
+    return [
+        e[len('pkgname = '):]
+        for e in run_with_error('tar -xOf %s .BUILDINFO' % quote(file), capture_stdout=True).split('\n')
+        if e.startswith('pkgname = ')
+    ][0]
 
 
 def build_package(pkgname: str) -> None:
@@ -28,8 +41,8 @@ def build_package(pkgname: str) -> None:
                        (quote(pkgname), quote(build_dir)))
         run_with_error('makepkg --syncdeps')
 
-        files = check_output('makepkg --packagelist', shell=True).decode() \
-            .removesuffix('\n').split('\n')
+        files = run_with_error(
+            'makepkg --packagelist', capture_stdout=True).removesuffix('\n').split('\n')
 
         dest_files = []
 
@@ -41,8 +54,7 @@ def build_package(pkgname: str) -> None:
         json_data = get_json()
         json_data['packages'][pkgname] = {
             'commit_hash': get_commit_hash(pkgname),
-            'dest_files': dest_files,
-            'includes': [e[len('pkgname = '):] for e in check_output('makepkg --printsrcinfo', shell=True).decode().split('\n') if e.startswith('pkgname = ')]
+            'dest_files': dest_files
         }
         save_json(json_data)
 
@@ -77,7 +89,7 @@ def save_json(json_data):
 
 
 def get_commit_hash(package):
-    return check_output('git ls-remote https://aur.archlinux.org/%s.git HEAD' % package, shell=True).decode().split('\t', maxsplit=1)[0]
+    return run_with_error('git ls-remote https://aur.archlinux.org/%s.git HEAD' % package, capture_stdout=True).split('\t', maxsplit=1)[0]
 
 
 def add_packages(packages):
@@ -101,7 +113,7 @@ def remove_packages(packages):
     including = []
     for package in packages:
         if package in json_data['packages']:
-            including.extend(json_data['packages'][package]['includes'])
+            including.extend(get_package_name_by_file(file) for file in json_data['packages'][package]['dest_files'])
 
             for file in json_data['packages'][package]['dest_files']:
                 run_with_error('sudo rm %s' % quote(file))
