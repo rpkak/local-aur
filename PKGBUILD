@@ -1,6 +1,6 @@
 # Maintainer: rpkak <rpkak@users.noreply.github.com>
 pkgname='local-aur'
-pkgver=0.0.2
+pkgver=0.0.2.r1.g81e1bee
 pkgrel=1
 epoch=
 pkgdesc="Create a local pacman repo with the packages you want to use."

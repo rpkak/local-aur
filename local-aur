@@ -25,7 +25,11 @@ def run_with_error(command: str, capture_stdout=False):
 
 
 def get_package_name_by_file(file: str):
-    run_with_error('tar -xOf %s .BUILDINFO' % quote(file))
+    return [
+        e[len('pkgname = '):]
+        for e in run_with_error('tar -xOf %s .BUILDINFO' % quote(file), capture_stdout=True).split('\n')
+        if e.startswith('pkgname = ')
+    ][0]
 
 
 def build_package(pkgname: str) -> None:
@@ -50,8 +54,7 @@ def build_package(pkgname: str) -> None:
         json_data = get_json()
         json_data['packages'][pkgname] = {
             'commit_hash': get_commit_hash(pkgname),
-            'dest_files': dest_files,
-            'includes': [e[len('pkgname = '):] for e in run_with_error('makepkg --printsrcinfo', capture_stdout=True).split('\n') if e.startswith('pkgname = ')]
+            'dest_files': dest_files
         }
         save_json(json_data)
 
@@ -110,7 +113,7 @@ def remove_packages(packages):
     including = []
     for package in packages:
         if package in json_data['packages']:
-            including.extend(json_data['packages'][package]['includes'])
+            including.extend(get_package_name_by_file(file) for file in json_data['packages'][package]['dest_files'])
 
             for file in json_data['packages'][package]['dest_files']:
                 run_with_error('sudo rm %s' % quote(file))
