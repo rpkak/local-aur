@@ -13,6 +13,4 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Test
-        run: |
-          echo 'nobody ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/nobody
-          sudo -u nobody ./test.sh
+        run: ./test.sh
