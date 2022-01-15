@@ -32,14 +32,17 @@ def get_package_name_by_file(file: str):
     ][0]
 
 
-def build_package(pkgname: str) -> None:
+def build_package(pkgname: str, noconfirm) -> None:
     cwd = os.getcwd()
     with TemporaryDirectory(prefix='%s.local-aur.' % pkgname) as build_dir:
         os.chdir(build_dir)
 
         run_with_error('git clone https://aur.archlinux.org/%s.git %s --depth=1 --single-branch' %
                        (quote(pkgname), quote(build_dir)))
-        run_with_error('makepkg --syncdeps')
+        if noconfirm:
+            run_with_error('makepkg --syncdeps --noconfirm')
+        else:
+            run_with_error('makepkg --syncdeps')
 
         files = run_with_error(
             'makepkg --packagelist', capture_stdout=True).removesuffix('\n').split('\n')
@@ -92,14 +95,14 @@ def get_commit_hash(package):
     return run_with_error('git ls-remote https://aur.archlinux.org/%s.git HEAD' % package, capture_stdout=True).split('\t', maxsplit=1)[0]
 
 
-def add_packages(packages):
+def add_packages(packages, noconfirm):
     json_data = get_json()
     dest_files = []
     for package in packages:
         if package in json_data['packages'] and json_data['packages'][package]['commit_hash'] == get_commit_hash(package):
             logging.warning('Package "%s" is already up-to-date.' % package)
         else:
-            dest_files.extend(build_package(package))
+            dest_files.extend(build_package(package, noconfirm))
 
     if len(dest_files) == 0:
         logging.warning('No packages to add to database.')
@@ -138,6 +141,7 @@ if __name__ == '__main__':
         add_parser.set_defaults(command='add')
         add_parser.add_argument(
             'packages', nargs='+', help='Packages to add to the local-aur repo.')
+        add_parser.add_argument('--noconfirm', action='store_true', help='Same as for makepkg')
 
         remove_parser = subparsers.add_parser(
             'remove', help='Removes packages from the local-aur repo.')
@@ -150,6 +154,6 @@ if __name__ == '__main__':
         if args.command == 'help':
             parser.print_usage()
         elif args.command == 'add':
-            add_packages(args.packages)
+            add_packages(args.packages, args.noconfirm)
         elif args.command == 'remove':
             remove_packages(args.packages)
