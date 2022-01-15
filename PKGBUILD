@@ -1,13 +1,13 @@
 # Maintainer: rpkak <rpkak@users.noreply.github.com>
 pkgname='local-aur'
-pkgver=0.0.2.r5.g010b97d
+pkgver=0.0.2.r10.gcb6fe73
 pkgrel=1
 epoch=
 pkgdesc="Create a local pacman repo with the packages you want to use."
 arch=('any')
 url="https://github.com/rpkak/local-aur"
 license=('Apache')
-depends=('pacman' 'git' 'python' 'sudo')
+depends=('pacman' 'git' 'python' 'sudo' $(pacman -Sgq base-devel))
 makedepends=('git')
 checkdepends=()
 optdepends=()
