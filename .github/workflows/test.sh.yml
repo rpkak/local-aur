@@ -12,7 +12,9 @@ jobs:
       - uses: actions/checkout@v2
       - name: Install pacman
         run: apk add pacman-makepkg sudo
-      - name: Give nobody sudo
-        run: "echo 'nobody ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/nobody"
+      - name: Give nobody permissions
+        run: |
+          echo 'nobody ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/nobody
+          chmod 777 $PWD
       - name: Test
         run: sudo -u nobody ./test.sh
