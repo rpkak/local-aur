@@ -1,0 +1,2 @@
+SigLevel = Optional
+Server = file:///var/lib/local-aur/repo
