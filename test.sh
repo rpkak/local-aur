@@ -4,8 +4,6 @@ set -e
 
 cd "$(dirname $0)"
 
-makepkg -sf
-
 if groups | grep -q '\bdocker\b'; then
     DOCKER_SUDO=""
 else
@@ -13,7 +11,7 @@ else
 fi
 
 ${DOCKER_SUDO}docker run \
-    -v "$(makepkg --packagelist)":/local-aur.pkg.tar.zst \
+    -v "$1":/local-aur.pkg.tar.zst \
     --name local-aur-builder \
     archlinux /bin/sh -c "pacman -Syy; pacman -U --noconfirm /local-aur.pkg.tar.zst; echo 'nobody ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/nobody"
 
