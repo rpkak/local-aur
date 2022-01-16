@@ -30,6 +30,4 @@ pkgver() {
 package() {
 	install -Dm755 ./local-aur "$pkgdir/usr/bin/local-aur"
 	install -Dm644 ./pacman-config "$pkgdir/usr/share/local-aur/pacman-config"
-	mkdir -p "$pkgdir/var/lib/$pkgname/repo"
-	echo '{"packages": {}}' > "$pkgdir/var/lib/$pkgname/local-aur.json"
 }
