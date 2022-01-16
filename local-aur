@@ -114,6 +114,7 @@ def remove_packages(packages):
     json_data = get_json()
 
     including = []
+    change = False
     for package in packages:
         if package in json_data['packages']:
             including.extend(get_package_attr_by_file(file, 'pkgname')
@@ -123,8 +124,12 @@ def remove_packages(packages):
                 run_with_error('sudo rm %s' % quote(file))
 
             del json_data['packages'][package]
+            change = True
         else:
             logging.warning('Package %s is not installed.', package)
+
+    if change:
+        save_json(json_data)
 
     remove_from_repo(including)
 
