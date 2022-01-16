@@ -16,7 +16,7 @@ jobs:
             pacman -Sy --noconfirm sudo base-devel git python
             cp -r /code /build
             chown -R nobody:nobody /build
-            echo \'nobody ALL=(ALL) NOPASSWD: ALL\' > /etc/sudoers.d/nobody
+            echo "nobody ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/nobody
             sudo -u nobody /build/build.sh
             cd /build
             cp "$(sudo -u nobody makepkg --packagelist)" /code/local-aur.pkg.tar.zst
