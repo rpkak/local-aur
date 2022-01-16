@@ -9,6 +9,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - name: Create local-aur.pkg.tar.zst
         run: |
           docker run --rm -v "$PWD":/code archlinux sh -c '
