@@ -24,11 +24,11 @@ def run_with_error(command: str, capture_stdout=False):
         return completed_process.stdout.decode()
 
 
-def get_package_name_by_file(file: str):
+def get_package_attr_by_file(file: str, attr: str):
     return [
-        e[len('pkgname = '):]
+        e[len('%s = ' % attr):]
         for e in run_with_error('tar -xOf %s .BUILDINFO' % quote(file), capture_stdout=True).split('\n')
-        if e.startswith('pkgname = ')
+        if e.startswith('%s = ' % attr)
     ][0]
 
 
@@ -114,23 +114,65 @@ def remove_packages(packages):
     json_data = get_json()
 
     including = []
+    change = False
     for package in packages:
         if package in json_data['packages']:
-            including.extend(get_package_name_by_file(file) for file in json_data['packages'][package]['dest_files'])
+            including.extend(get_package_attr_by_file(file, 'pkgname')
+                             for file in json_data['packages'][package]['dest_files'])
 
             for file in json_data['packages'][package]['dest_files']:
                 run_with_error('sudo rm %s' % quote(file))
 
             del json_data['packages'][package]
+            change = True
         else:
             logging.warning('Package %s is not installed.', package)
 
+    if change:
+        save_json(json_data)
+
     remove_from_repo(including)
+
+
+def print_table(data):
+    if len(data) != 0:
+        significant_column_number = len(data[0]) - 1
+        max_column_len = [0] * significant_column_number
+
+        for row in data:
+            max_column_len = [max(len(item), column_len)
+                              for item, column_len in zip(row, max_column_len)]
+
+        for row in data:
+            for i, item in enumerate(row):
+                if i == significant_column_number:
+                    print(item)
+                else:
+                    print('%s%s ' %
+                          (item, ' ' * (max_column_len[i] - len(item))), end='')
+
+
+def list_packages(aur, pacman):
+    json_data = get_json()
+
+    table = []
+
+    for package in json_data['packages']:
+        if aur:
+            table.append(['aur', package, json_data['packages']
+                         [package]['commit_hash']])
+        if pacman:
+            for file in json_data['packages'][package]['dest_files']:
+                table.append(['pacman', get_package_attr_by_file(
+                    file, 'pkgname'), get_package_attr_by_file(file, 'pkgver')])
+
+    print_table(table)
 
 
 if __name__ == '__main__':
     if os.geteuid() == 0:
         logging.error('Running local-aur as root is not allowed.')
+        exit(10)
     else:
         parser = ArgumentParser('local-aur')
         parser.set_defaults(command='help')
@@ -141,13 +183,21 @@ if __name__ == '__main__':
         add_parser.set_defaults(command='add')
         add_parser.add_argument(
             'packages', nargs='+', help='Packages to add to the local-aur repo.')
-        add_parser.add_argument('--noconfirm', action='store_true', help='Same as for makepkg')
+        add_parser.add_argument(
+            '--noconfirm', action='store_true', help='Same as for makepkg')
 
         remove_parser = subparsers.add_parser(
             'remove', help='Removes packages from the local-aur repo.')
         remove_parser.set_defaults(command='remove')
         remove_parser.add_argument(
             'packages', nargs='+', help='Packages to remove from the local-aur repo.')
+
+        remove_parser = subparsers.add_parser('list', help='Lists packages')
+        remove_parser.set_defaults(command='list')
+        remove_parser.add_argument(
+            '-p', '--pacman', action='store_true', help='Show aur and pacman packages.')
+        remove_parser.add_argument(
+            '-P', '--pacman-only', action='store_true', help='Show pacman packages only.')
 
         args = parser.parse_args()
 
@@ -157,3 +207,9 @@ if __name__ == '__main__':
             add_packages(args.packages, args.noconfirm)
         elif args.command == 'remove':
             remove_packages(args.packages)
+        elif args.command == 'list':
+            if args.pacman and args.pacman_only:
+                logging.error('You can\'t use --pacman and --pacman-only.')
+            else:
+                list_packages(not args.pacman_only,
+                              args.pacman or args.pacman_only)
