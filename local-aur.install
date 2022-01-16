@@ -30,7 +30,7 @@ post_install() {
 # arg 1:  the old package version
 pre_remove() {
 	rm -r /var/lib/local-aur
-	echo python -c '
+	python -c '
 with open("/etc/pacman.conf") as f: content = f.read()
 content = content.replace("\n[local-aur]\nInclude = /usr/share/local-aur/pacman-config\n", "")
 content = content.replace("[local-aur]\nInclude = /usr/share/local-aur/pacman-config\n", "")
