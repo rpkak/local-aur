@@ -11,6 +11,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
+
       - name: Create local-aur.pkg.tar.zst
         run: |
           docker run --rm -v "$PWD":/code archlinux sh -c '
@@ -22,6 +23,15 @@ jobs:
             sudo -u nobody /build/build.sh
             cd /build
             cp "$(sudo -u nobody makepkg --packagelist)" /code/local-aur.pkg.tar.zst
+          '
+      
+      - name: Namcap
+        run: |
+          docker run --rm -v "$PWD":/code archlinux sh -c '
+            set -e
+            pacman -Sy --noconfirm namcap
+            namcap /code/PKGBUILD
+            namcap /code/local-aur.pkg.tar.zst
           '
 
       - name: Test
