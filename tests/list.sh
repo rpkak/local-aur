@@ -12,7 +12,7 @@ sudo -u nobody local-aur list -P
 [ -z "$(sudo -u nobody local-aur list -p)" ]
 [ -z "$(sudo -u nobody local-aur list -P)" ]
 
-sudo -u nobody local-aur add --noconfirm pandoc-bin
+sudo -u nobody local-aur build --noconfirm pandoc-bin
 
 sudo -u nobody local-aur list
 sudo -u nobody local-aur list -p
