@@ -95,12 +95,16 @@ def get_commit_hash(package):
     return run_with_error('git ls-remote https://aur.archlinux.org/%s.git HEAD' % package, capture_stdout=True).split('\t', maxsplit=1)[0]
 
 
-def add_packages(packages, noconfirm):
+def build_packages(packages, update_all, noconfirm):
     json_data = get_json()
     dest_files = []
+
+    if update_all:
+        packages.extend(json_data['packages'])
+
     for package in packages:
         if package in json_data['packages'] and json_data['packages'][package]['commit_hash'] == get_commit_hash(package):
-            logging.warning('Package "%s" is already up-to-date.' % package)
+            logging.info('Package "%s" is already up-to-date.' % package)
         else:
             dest_files.extend(build_package(package, noconfirm))
 
@@ -178,12 +182,14 @@ if __name__ == '__main__':
         parser.set_defaults(command='help')
         subparsers = parser.add_subparsers()
 
-        add_parser = subparsers.add_parser(
-            'add', help='Adds packages to the local-aur repo.')
-        add_parser.set_defaults(command='add')
-        add_parser.add_argument(
-            'packages', nargs='+', help='Packages to add to the local-aur repo.')
-        add_parser.add_argument(
+        build_parser = subparsers.add_parser(
+            'build', help='Adds packages to the local-aur repo.')
+        build_parser.set_defaults(command='build')
+        build_parser.add_argument(
+            'packages', nargs='*', help='Packages to add to the local-aur repo.')
+        build_parser.add_argument(
+            '-u', '--update-all', action='store_true', help='Update all packages.')
+        build_parser.add_argument(
             '--noconfirm', action='store_true', help='Same as for makepkg')
 
         remove_parser = subparsers.add_parser(
@@ -194,22 +200,24 @@ if __name__ == '__main__':
 
         remove_parser = subparsers.add_parser('list', help='Lists packages')
         remove_parser.set_defaults(command='list')
-        remove_parser.add_argument(
-            '-p', '--pacman', action='store_true', help='Show aur and pacman packages.')
-        remove_parser.add_argument(
-            '-P', '--pacman-only', action='store_true', help='Show pacman packages only.')
+        g = remove_parser.add_mutually_exclusive_group()
+        g.add_argument('-p', '--pacman', action='store_true',
+                       help='Show aur and pacman packages.')
+        g.add_argument('-P', '--pacman-only', action='store_true',
+                       help='Show pacman packages only.')
 
         args = parser.parse_args()
 
         if args.command == 'help':
             parser.print_usage()
-        elif args.command == 'add':
-            add_packages(args.packages, args.noconfirm)
+        elif args.command == 'build':
+            if len(args.packages) == 0 and not args.update_all:
+                logging.error('one of packages and --update-all is required')
+                exit(1)
+            else:
+                build_packages(args.packages, args.update_all, args.noconfirm)
         elif args.command == 'remove':
             remove_packages(args.packages)
         elif args.command == 'list':
-            if args.pacman and args.pacman_only:
-                logging.error('You can\'t use --pacman and --pacman-only.')
-            else:
-                list_packages(not args.pacman_only,
-                              args.pacman or args.pacman_only)
+            list_packages(not args.pacman_only,
+                        args.pacman or args.pacman_only)
