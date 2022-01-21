@@ -1,0 +1,5 @@
+[Unit]
+Description=Update all packages
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/local-aur build -u
