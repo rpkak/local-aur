@@ -1,0 +1,8 @@
+[Unit]
+Description=Updates the local-aur registry every 10 minutes.
+
+[Timer]
+OnBootSec=10s
+
+[Install]
+WantedBy=timers.target
