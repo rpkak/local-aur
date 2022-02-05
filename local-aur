@@ -4,17 +4,21 @@ import json
 import logging
 import os
 import sys
-from shlex import quote
-from subprocess import run, PIPE
-from tempfile import NamedTemporaryFile, TemporaryDirectory
 from argparse import ArgumentParser
+from pwd import getpwnam
+from shlex import quote
+from subprocess import PIPE, run
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 DATA = os.path.join('/', 'var', 'lib', 'local-aur')
 
 
 def run_with_error(command: str, capture_stdout=False):
-    completed_process = run(command, shell=True, stdout=(
-        PIPE if capture_stdout else None))
+    completed_process = run(
+        command,
+        shell=True,
+        stdout=(PIPE if capture_stdout else None)
+    )
     if completed_process.returncode != 0:
         logging.error('Executing "%s" returned %s' %
                       (command, completed_process.returncode))
@@ -33,7 +37,6 @@ def get_package_attr_by_file(file: str, attr: str):
 
 
 def build_package(pkgname: str, noconfirm) -> None:
-    cwd = os.getcwd()
     with TemporaryDirectory(prefix='%s.local-aur.' % pkgname) as build_dir:
         os.chdir(build_dir)
 
@@ -52,7 +55,7 @@ def build_package(pkgname: str, noconfirm) -> None:
         for file in files:
             dest = os.path.join(DATA, 'repo', os.path.basename(file))
             dest_files.append(dest)
-            run_with_error('sudo mv %s %s' % (quote(file), quote(dest)))
+            run_with_error('mv %s %s' % (quote(file), quote(dest)))
 
         json_data = get_json()
         json_data['packages'][pkgname] = {
@@ -61,18 +64,18 @@ def build_package(pkgname: str, noconfirm) -> None:
         }
         save_json(json_data)
 
-    os.chdir(cwd)
+        os.chdir('/')
 
     return dest_files
 
 
 def add_to_repo(dest_files):
-    run_with_error('sudo repo-add %s %s' % (quote(os.path.join(DATA, 'repo',
+    run_with_error('repo-add %s %s' % (quote(os.path.join(DATA, 'repo',
                    'local-aur.db.tar.gz')), ' '.join(quote(file) for file in dest_files)))
 
 
 def remove_from_repo(packages):
-    run_with_error('sudo repo-remove %s %s' % (quote(os.path.join(DATA, 'repo',
+    run_with_error('repo-remove %s %s' % (quote(os.path.join(DATA, 'repo',
                    'local-aur.db.tar.gz')), ' '.join(quote(package) for package in packages)))
 
 
@@ -85,9 +88,9 @@ def save_json(json_data):
     with NamedTemporaryFile('w') as f:
         json.dump(json_data, f)
         f.flush()
-        run_with_error('sudo cp %s %s' % (
+        run_with_error('cp %s %s' % (
             quote(f.name), quote(os.path.join(DATA, 'local-aur.json'))))
-        run_with_error('sudo chmod 644 %s' % quote(
+        run_with_error('chmod 644 %s' % quote(
             os.path.join(DATA, 'local-aur.json')))
 
 
@@ -125,7 +128,7 @@ def remove_packages(packages):
                              for file in json_data['packages'][package]['dest_files'])
 
             for file in json_data['packages'][package]['dest_files']:
-                run_with_error('sudo rm %s' % quote(file))
+                run_with_error('rm %s' % quote(file))
 
             del json_data['packages'][package]
             change = True
@@ -174,11 +177,27 @@ def list_packages(aur, pacman):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO, format='local-aur: %(levelname).1s  %(message)s')
+    logging.basicConfig(level=logging.INFO,
+                        format='local-aur: %(levelname).1s  %(message)s')
+    os.chdir('/')
 
-    if os.geteuid() == 0:
-        logging.error('Running local-aur as root is not allowed.')
-        exit(10)
+    try:
+        pwd = getpwnam('local-aur')
+
+        stat = os.stat(DATA)
+        if stat.st_uid != pwd.pw_uid or stat.st_gid != pwd.pw_gid:
+            os.chown(DATA, pwd.pw_uid, pwd.pw_gid)
+            os.chown(os.path.join(DATA, 'local-aur.json'), pwd.pw_uid, pwd.pw_gid)
+            os.chown(os.path.join(DATA, 'repo'), pwd.pw_uid, pwd.pw_gid)
+            for file in os.listdir(os.path.join(DATA, 'repo')):
+                os.chown(os.path.join(DATA, 'repo', file), pwd.pw_uid, pwd.pw_gid)
+
+        os.setgroups([pwd.pw_gid])
+        os.setregid(pwd.pw_gid, pwd.pw_gid)
+        os.setreuid(pwd.pw_uid, pwd.pw_uid)
+    except PermissionError:
+        logging.error('Permission denied')
+        exit(2)
     else:
         parser = ArgumentParser('local-aur')
         parser.set_defaults(command='help')
@@ -222,4 +241,4 @@ if __name__ == '__main__':
             remove_packages(args.packages)
         elif args.command == 'list':
             list_packages(not args.pacman_only,
-                        args.pacman or args.pacman_only)
+                          args.pacman or args.pacman_only)
