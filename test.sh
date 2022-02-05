@@ -13,7 +13,7 @@ fi
 ${DOCKER_SUDO}docker run \
     -v "$1":/local-aur.pkg.tar.zst \
     --name local-aur-builder \
-    archlinux /bin/sh -c "pacman -Syy; pacman -U --noconfirm /local-aur.pkg.tar.zst; echo 'nobody ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/nobody"
+    archlinux /bin/sh -c "pacman -Syy; pacman -U --noconfirm /local-aur.pkg.tar.zst"
 
 IMAGE_HASH="$(${DOCKER_SUDO}docker commit local-aur-builder)"
 
