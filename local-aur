@@ -42,27 +42,31 @@ def build_package(pkgname: str, noconfirm) -> None:
 
         run_with_error('git clone https://aur.archlinux.org/%s.git %s --depth=1 --single-branch' %
                        (quote(pkgname), quote(build_dir)))
-        if noconfirm:
-            run_with_error('makepkg --syncdeps --noconfirm')
-        else:
-            run_with_error('makepkg --syncdeps')
-
-        files = run_with_error(
-            'makepkg --packagelist', capture_stdout=True).removesuffix('\n').split('\n')
 
         dest_files = []
 
-        for file in files:
-            dest = os.path.join(DATA, 'repo', os.path.basename(file))
-            dest_files.append(dest)
-            run_with_error('mv %s %s' % (quote(file), quote(dest)))
+        if os.listdir(build_dir) == ['.git']:
+            logging.error('Package "%s" does not exist.', pkgname)
+        else:
+            if noconfirm:
+                run_with_error('makepkg --syncdeps --noconfirm')
+            else:
+                run_with_error('makepkg --syncdeps')
 
-        json_data = get_json()
-        json_data['packages'][pkgname] = {
-            'commit_hash': get_commit_hash(pkgname),
-            'dest_files': dest_files
-        }
-        save_json(json_data)
+            files = run_with_error(
+                'makepkg --packagelist', capture_stdout=True).removesuffix('\n').split('\n')
+
+            for file in files:
+                dest = os.path.join(DATA, 'repo', os.path.basename(file))
+                dest_files.append(dest)
+                run_with_error('mv %s %s' % (quote(file), quote(dest)))
+
+            json_data = get_json()
+            json_data['packages'][pkgname] = {
+                'commit_hash': get_commit_hash(pkgname),
+                'dest_files': dest_files
+            }
+            save_json(json_data)
 
         os.chdir('/')
 
@@ -133,7 +137,7 @@ def remove_packages(packages):
             del json_data['packages'][package]
             change = True
         else:
-            logging.warning('Package %s is not installed.', package)
+            logging.warning('Package "%s" is not installed.', package)
 
     if change:
         save_json(json_data)
