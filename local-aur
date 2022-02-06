@@ -176,21 +176,19 @@ def list_packages(aur, pacman):
     print_table(table)
 
 
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO,
-                        format='local-aur: %(levelname).1s  %(message)s')
-    os.chdir('/')
-
+def check_permissions():
     try:
         pwd = getpwnam('local-aur')
 
         stat = os.stat(DATA)
         if stat.st_uid != pwd.pw_uid or stat.st_gid != pwd.pw_gid:
             os.chown(DATA, pwd.pw_uid, pwd.pw_gid)
-            os.chown(os.path.join(DATA, 'local-aur.json'), pwd.pw_uid, pwd.pw_gid)
+            os.chown(os.path.join(DATA, 'local-aur.json'),
+                     pwd.pw_uid, pwd.pw_gid)
             os.chown(os.path.join(DATA, 'repo'), pwd.pw_uid, pwd.pw_gid)
             for file in os.listdir(os.path.join(DATA, 'repo')):
-                os.chown(os.path.join(DATA, 'repo', file), pwd.pw_uid, pwd.pw_gid)
+                os.chown(os.path.join(DATA, 'repo', file),
+                         pwd.pw_uid, pwd.pw_gid)
 
         os.setgroups([pwd.pw_gid])
         os.setregid(pwd.pw_gid, pwd.pw_gid)
@@ -198,47 +196,55 @@ if __name__ == '__main__':
     except PermissionError:
         logging.error('Permission denied')
         exit(2)
-    else:
-        parser = ArgumentParser('local-aur')
-        parser.set_defaults(command='help')
-        subparsers = parser.add_subparsers()
 
-        build_parser = subparsers.add_parser(
-            'build', help='Adds packages to the local-aur repo.')
-        build_parser.set_defaults(command='build')
-        build_parser.add_argument(
-            'packages', nargs='*', help='Packages to add to the local-aur repo.')
-        build_parser.add_argument(
-            '-u', '--update-all', action='store_true', help='Update all packages.')
-        build_parser.add_argument(
-            '--noconfirm', action='store_true', help='Same as for makepkg')
 
-        remove_parser = subparsers.add_parser(
-            'remove', help='Removes packages from the local-aur repo.')
-        remove_parser.set_defaults(command='remove')
-        remove_parser.add_argument(
-            'packages', nargs='+', help='Packages to remove from the local-aur repo.')
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO,
+                        format='local-aur: %(levelname).1s  %(message)s')
+    os.chdir('/')
 
-        remove_parser = subparsers.add_parser('list', help='Lists packages')
-        remove_parser.set_defaults(command='list')
-        g = remove_parser.add_mutually_exclusive_group()
-        g.add_argument('-p', '--pacman', action='store_true',
-                       help='Show aur and pacman packages.')
-        g.add_argument('-P', '--pacman-only', action='store_true',
-                       help='Show pacman packages only.')
+    parser = ArgumentParser('local-aur')
+    parser.set_defaults(command='help')
+    subparsers = parser.add_subparsers()
 
-        args = parser.parse_args()
+    build_parser = subparsers.add_parser(
+        'build', help='Adds packages to the local-aur repo.')
+    build_parser.set_defaults(command='build')
+    build_parser.add_argument(
+        'packages', nargs='*', help='Packages to add to the local-aur repo.')
+    build_parser.add_argument(
+        '-u', '--update-all', action='store_true', help='Update all packages.')
+    build_parser.add_argument(
+        '--noconfirm', action='store_true', help='Same as for makepkg')
 
-        if args.command == 'help':
-            parser.print_usage()
-        elif args.command == 'build':
-            if len(args.packages) == 0 and not args.update_all:
-                logging.error('one of packages and --update-all is required')
-                exit(1)
-            else:
-                build_packages(args.packages, args.update_all, args.noconfirm)
-        elif args.command == 'remove':
-            remove_packages(args.packages)
-        elif args.command == 'list':
-            list_packages(not args.pacman_only,
-                          args.pacman or args.pacman_only)
+    remove_parser = subparsers.add_parser(
+        'remove', help='Removes packages from the local-aur repo.')
+    remove_parser.set_defaults(command='remove')
+    remove_parser.add_argument(
+        'packages', nargs='+', help='Packages to remove from the local-aur repo.')
+
+    remove_parser = subparsers.add_parser('list', help='Lists packages')
+    remove_parser.set_defaults(command='list')
+    g = remove_parser.add_mutually_exclusive_group()
+    g.add_argument('-p', '--pacman', action='store_true',
+                   help='Show aur and pacman packages.')
+    g.add_argument('-P', '--pacman-only', action='store_true',
+                   help='Show pacman packages only.')
+
+    args = parser.parse_args()
+
+    if args.command == 'help':
+        parser.print_usage()
+    elif args.command == 'build':
+        if len(args.packages) == 0 and not args.update_all:
+            logging.error('one of packages and --update-all is required')
+            exit(1)
+        else:
+            check_permissions()
+            build_packages(args.packages, args.update_all, args.noconfirm)
+    elif args.command == 'remove':
+        check_permissions()
+        remove_packages(args.packages)
+    elif args.command == 'list':
+        list_packages(not args.pacman_only,
+                      args.pacman or args.pacman_only)
