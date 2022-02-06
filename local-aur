@@ -186,6 +186,7 @@ def check_permissions():
             os.chown(os.path.join(DATA, 'local-aur.json'),
                      pwd.pw_uid, pwd.pw_gid)
             os.chown(os.path.join(DATA, 'repo'), pwd.pw_uid, pwd.pw_gid)
+            os.chown(os.path.join(DATA, 'home'), pwd.pw_uid, pwd.pw_gid)
             for file in os.listdir(os.path.join(DATA, 'repo')):
                 os.chown(os.path.join(DATA, 'repo', file),
                          pwd.pw_uid, pwd.pw_gid)
@@ -193,6 +194,8 @@ def check_permissions():
         os.setgroups([pwd.pw_gid])
         os.setregid(pwd.pw_gid, pwd.pw_gid)
         os.setreuid(pwd.pw_uid, pwd.pw_uid)
+        os.environ['USER'] = 'local-aur'
+        os.environ['HOME'] = os.path.join(DATA, 'home')
     except PermissionError:
         logging.error('Permission denied')
         exit(2)
