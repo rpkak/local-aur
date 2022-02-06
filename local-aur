@@ -141,8 +141,7 @@ def remove_packages(packages):
 
     if change:
         save_json(json_data)
-
-    remove_from_repo(including)
+        remove_from_repo(including)
 
 
 def print_table(data):
