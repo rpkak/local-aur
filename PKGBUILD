@@ -1,13 +1,13 @@
 # Maintainer: rpkak <rpkak@users.noreply.github.com>
 pkgname='local-aur'
-pkgver=0.0.4.r4.ge2aafce
+pkgver=0.1.0
 pkgrel=1
 epoch=
 pkgdesc="Download the AUR packages you trust and use pacman to install them."
 arch=('any')
 url="https://github.com/rpkak/local-aur"
 license=('Apache')
-depends=('pacman' 'git' 'python3' 'tar' $(pacman -Sgq base-devel))
+depends=('pacman' 'git' 'python3' 'tar' 'zstd' $(pacman -Sgq base-devel))
 makedepends=()
 checkdepends=()
 optdepends=()
