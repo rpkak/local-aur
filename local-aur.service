@@ -1,0 +1,6 @@
+[Unit]
+Description=Updates the local-aur registry.
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/local-aur build -u

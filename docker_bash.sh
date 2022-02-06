@@ -19,5 +19,4 @@ ${DOCKER_SUDO}docker run \
     archlinux /bin/sh -c "
     pacman -Syy
     pacman -U --noconfirm /local-aur.pkg.tar.zst
-    echo 'nobody ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/nobody
-    sudo -u nobody bash"
+    bash"
