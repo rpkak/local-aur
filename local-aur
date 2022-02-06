@@ -233,18 +233,22 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if args.command == 'help':
-        parser.print_usage()
-    elif args.command == 'build':
-        if len(args.packages) == 0 and not args.update_all:
-            logging.error('one of packages and --update-all is required')
-            exit(1)
-        else:
+    try:
+        if args.command == 'help':
+            parser.print_usage()
+        elif args.command == 'build':
+            if len(args.packages) == 0 and not args.update_all:
+                logging.error('one of packages and --update-all is required')
+                exit(1)
+            else:
+                check_permissions()
+                build_packages(args.packages, args.update_all)
+        elif args.command == 'remove':
             check_permissions()
-            build_packages(args.packages, args.update_all)
-    elif args.command == 'remove':
-        check_permissions()
-        remove_packages(args.packages)
-    elif args.command == 'list':
-        list_packages(not args.pacman_only,
-                      args.pacman or args.pacman_only)
+            remove_packages(args.packages)
+        elif args.command == 'list':
+            list_packages(not args.pacman_only,
+                        args.pacman or args.pacman_only)
+    except KeyboardInterrupt:
+        logging.error('Canceling')
+        exit(130)
