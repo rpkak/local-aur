@@ -12,7 +12,7 @@ local-aur list -P
 [ -z "$(local-aur list -p)" ]
 [ -z "$(local-aur list -P)" ]
 
-local-aur build --noconfirm pandoc-bin
+local-aur build pandoc-bin
 
 local-aur list
 local-aur list -p
