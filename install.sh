@@ -2,7 +2,7 @@
 
 set -e
 
-if [ "0" != "$(id -u)" ]
+if [ "0" == "$(id -u)" ]
 then echo "Running this script as root is not allowed." > /dev/stderr
      exit 1
 fi
