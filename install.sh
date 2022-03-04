@@ -3,13 +3,13 @@
 set -e
 
 if [ "0" == "$(id -u)" ]
-then echo "Running this script as root is not allowed." > /dev/stderr
+then echo "Running this script as root is not allowed." 1>&2
      exit 1
 fi
 
 if ! sudo --version &> /dev/null
-then echo "sudo needs to be installed." > /dev/stderr
-     echo "Try to execute: pacman -Sy sudo --asdeps" > /dev/stderr
+then echo "sudo needs to be installed." 1>&2
+     echo "Try to execute: pacman -Sy sudo --asdeps" 1>&2
      exit 1
 fi
 
