@@ -2,9 +2,24 @@
 
 set -e
 
-BUILD_DIR="$(mktemp --tmpdir -d local-aur.XXXXXXXX)"
+if [ "0" != "$(id -u)" ]
+then echo "Running this script as root is not allowed." > /dev/stderr
+     exit 1
+fi
 
-pacman -Sy git --asdeps --needed
+if ! sudo --version &> /dev/null
+then echo "sudo needs to be installed." > /dev/stderr
+     echo "Try to execute: pacman -Sy sudo --asdeps" > /dev/stderr
+     exit 1
+fi
+
+if ! git --version &> /dev/null
+then echo "git needs to be installed." > /dev/stderr
+     echo "Try to execute: pacman -Sy git --asdeps" > /dev/stderr
+     exit 1
+fi
+
+BUILD_DIR="$(mktemp --tmpdir -d local-aur.XXXXXXXX)"
 
 git clone --depth 1 "https://aur.archlinux.org/local-aur.git" "$BUILD_DIR"
 
