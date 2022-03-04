@@ -13,10 +13,10 @@ then echo "sudo needs to be installed." > /dev/stderr
      exit 1
 fi
 
+sudo pacman -Sy --needed --asdeps --noconfirm base-devel
+
 if ! git --version &> /dev/null
-then echo "git needs to be installed." > /dev/stderr
-     echo "Try to execute: pacman -Sy git --asdeps" > /dev/stderr
-     exit 1
+then sudo pacman -S --asdeps --noconfirm git
 fi
 
 BUILD_DIR="$(mktemp --tmpdir -d local-aur.XXXXXXXX)"
