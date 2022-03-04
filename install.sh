@@ -4,6 +4,8 @@ set -e
 
 BUILD_DIR="$(mktemp --tmpdir -d local-aur.XXXXXXXX)"
 
+pacman -Sy git --asdeps --needed
+
 git clone --depth 1 "https://aur.archlinux.org/local-aur.git" "$BUILD_DIR"
 
 cd "$BUILD_DIR"
