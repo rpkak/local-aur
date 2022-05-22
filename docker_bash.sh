@@ -17,6 +17,6 @@ ${DOCKER_SUDO}docker run \
     --rm \
     -it \
     archlinux /bin/sh -c "
-    pacman -Syy
+    pacman -Syy --noconfirm glibc
     pacman -U --noconfirm /local-aur.pkg.tar.zst
     bash"
