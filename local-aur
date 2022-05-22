@@ -115,7 +115,13 @@ def build_packages(packages, update_all, force):
         if package in json_data['packages'] and json_data['packages'][package]['commit_hash'] == get_commit_hash(package) and not force:
             logging.info('Package "%s" is already up-to-date.' % package)
         else:
-            dest_files.extend(build_package(package))
+            try:
+                new_dest_files = build_package(package)
+            except SystemExit:
+                os.chdir('/')
+                logging.warning('Failed to build package.')
+            else:
+                dest_files.extend(new_dest_files)
 
     if len(dest_files) == 0:
         logging.warning('No packages to add to database.')
