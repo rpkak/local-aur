@@ -2,6 +2,23 @@
 
 set -e
 
+if [ "0" == "$(id -u)" ]
+then echo "Running this script as root is not allowed." 1>&2
+     exit 1
+fi
+
+if ! sudo --version &> /dev/null
+then echo "sudo needs to be installed." 1>&2
+     echo "Try to execute: pacman -Sy sudo --asdeps" 1>&2
+     exit 1
+fi
+
+sudo pacman -Sy --needed --asdeps --noconfirm base-devel
+
+if ! git --version &> /dev/null
+then sudo pacman -S --asdeps --noconfirm git
+fi
+
 BUILD_DIR="$(mktemp --tmpdir -d local-aur.XXXXXXXX)"
 
 git clone --depth 1 "https://aur.archlinux.org/local-aur.git" "$BUILD_DIR"
