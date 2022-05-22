@@ -53,12 +53,17 @@ def build_package(pkgname: str) -> None:
             files = run_with_error(
                 'makepkg --packagelist', capture_stdout=True).removesuffix('\n').split('\n')
 
+            json_data = get_json()
+
+            if pkgname in json_data['packages']:
+                for file in json_data['packages'][pkgname]['dest_files']:
+                    run_with_error('rm %s' % quote(file))
+
             for file in files:
                 dest = os.path.join(DATA, 'repo', os.path.basename(file))
                 dest_files.append(dest)
                 run_with_error('mv %s %s' % (quote(file), quote(dest)))
 
-            json_data = get_json()
             json_data['packages'][pkgname] = {
                 'commit_hash': get_commit_hash(pkgname),
                 'dest_files': dest_files
