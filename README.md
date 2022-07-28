@@ -97,3 +97,19 @@ curl -s https://raw.githubusercontent.com/rpkak/local-aur/master/install.sh | sh
 you can install local-aur and add itself to the local-aur repo.
 
 With this a new update of `local-aur` will be build by `local-aur build -u` or the `local-aur` systemd service.
+
+# Troubleshooting
+
+## `makepkg` fails with missing GPG key during verification
+
+This one is an easy-fix, but a bit tricky.
+
+```
+sudo su -l local-aur -s /bin/bash -c "gpg --recv-key <keyid>"
+```
+
+For example, if you're installing [Spotify AUR package](https://aur.archlinux.org/packages/spotify), the command would be this;
+
+```
+sudo su -l local-aur -s /bin/bash -c "gpg --recv-key 5E3C45D7B312C643"
+```
