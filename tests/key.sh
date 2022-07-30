@@ -6,6 +6,6 @@ pacman -Sy --asdeps --noconfirm alsa-lib gtk3 libxss desktop-file-utils nss at-s
 
 ! local-aur build spotify
 
-local-aur key --recv-key 5E3C45D7B312C643
+local-aur gpg --recv-key 5E3C45D7B312C643
 
 local-aur build spotify
