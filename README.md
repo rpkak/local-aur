@@ -80,6 +80,29 @@ To uninstall it from pacman, just execute:
 pacman -Rs [pkgnames]
 ```
 
+### Managing GPG-keys
+
+To verify some packages gpg is used. `local-aur gpg` calls gpg for local-aur.
+
+For example if you want to install spotify, you get this error:
+
+```
+$ sudo local-aur build spotify
+[...]
+==> Verifying source file signatures with gpg...
+    spotify-1.1.84.716-2-Release ... FAILED (unknown public key 5E3C45D7B312C643)
+==> ERROR: One or more PGP signatures could not be verified!
+local-aur: E  Executing "makepkg" returned 1
+local-aur: W  Failed to build package.
+local-aur: W  No packages to add to database.
+```
+
+This can be fixed by:
+
+```
+local-aur gpg --recv-key 5E3C45D7B312C643
+```
+
 ## Installation
 
 With executing
