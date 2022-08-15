@@ -103,7 +103,7 @@ def get_commit_hash(package):
     return run_with_error('git ls-remote https://aur.archlinux.org/%s.git HEAD' % package, capture_stdout=True).split('\t', maxsplit=1)[0]
 
 
-def build_packages(packages, update_all, force):
+def build_packages(packages, update_all, force, install):
     json_data = get_json()
     dest_files = []
 
@@ -126,6 +126,13 @@ def build_packages(packages, update_all, force):
         logging.warning('No packages to add to database.')
     else:
         add_to_repo(dest_files)
+        if(install):
+            install_packages(dest_files)
+
+
+def install_packages(dest_files):
+    run_with_error('pacman -Sy --noconfirm %s' % ' '.join(quote(
+        get_package_attr_by_file(file, 'pkgname')) for file in dest_files), root=True)
 
 
 def remove_packages(packages):
@@ -210,6 +217,8 @@ if __name__ == '__main__':
         '-u', '--update-all', action='store_true', help='Update all packages.')
     build_parser.add_argument(
         '-f', '--force', action='store_true', help='Build even if done already.')
+    build_parser.add_argument('-i', '--install-directly',
+                              action='store_true', help='Install packages after build.')
 
     remove_parser = subparsers.add_parser(
         'remove', help='Removes packages from the local-aur repo.')
@@ -242,7 +251,8 @@ if __name__ == '__main__':
                 exit(1)
             else:
                 check_permissions()
-                build_packages(args.packages, args.update_all, args.force)
+                build_packages(args.packages, args.update_all,
+                               args.force, args.install_directly)
         elif args.command == 'remove':
             check_permissions()
             remove_packages(args.packages)
