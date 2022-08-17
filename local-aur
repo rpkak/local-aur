@@ -68,7 +68,7 @@ def build_package(pkgname: str) -> None:
             for file in files:
                 dest = os.path.join(DATA, 'repo', os.path.basename(file))
                 dest_files.append(dest)
-                os.rename(quote(file), quote(dest))
+                shutil.move(quote(file), quote(dest))
 
             json_data['packages'][pkgname] = {
                 'commit_hash': get_commit_hash(pkgname),
