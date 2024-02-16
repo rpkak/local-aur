@@ -27,7 +27,7 @@ cd "$BUILD_DIR"
 
 makepkg --noconfirm -si
 
-PKGFILE="$(makepkg --packagelist)"
+PKGFILE="$(makepkg --packagelist | head -n1)"
 TARGET="/var/lib/local-aur/repo/$(basename "$PKGFILE")"
 
 sudo mv "$PKGFILE" "$TARGET"
